@@ -1,0 +1,88 @@
+---
+title: "Cost effectiveness analysis for an AMR point-of-care test"
+author: "Adam Howes"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+* Neonate with suspected neonatal sepsis in India
+* Considered two possible point-of-care tests (POCT)
+  1. POCT to identify neonatal sepsis, but not causative pathogen
+  2. POCT to identify neonatal sepsis and causative pathogen
+* Metrics are cost per disability adjusted life year (DALY) and incremental cost-effectiveness ratio (ICER)
+
+```{r}
+#' Number of children born in India each year
+births_per_year <- 25 * 10^6
+
+#' Rate of having neonatal sepsis
+sepsis_rate <- 70 / 1000
+
+#' The number of births with neonatal sepsis is
+(births_sepsis <- births_per_year * sepsis_rate)
+
+#' Of those, assume 40% are high risk and 60% are low risk
+prop_high_risk_sepsis <- 0.4
+prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
+
+#' Total births with high risk sepsis
+(births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis)
+
+#' Total births with low risk sepsis
+(births_sepsis_low_risk <- births_sepsis * prop_low_risk_sepsis)
+
+#' Assume 20% of neonates receive antibiotics
+prop_abx <- 0.2
+
+#' Then the total number of births who recieve anitbiotics per year is
+(births_abx <- births_per_year * prop_abx)
+
+#' Assume that all high risk births recieve antibiotics
+(births_abx_sepsis_high_risk <- births_sepsis_high_risk)
+
+#' Assume the remainder are given to those who are low risk
+(births_abx_sepsis_low_risk <- births_abx - births_abx_sepsis_high_risk)
+```
+
+```{r}
+#' AMR burden per perscription of antibiotics
+total_births_per_year <- 130 * 10^6
+(total_births_abx_per_year <- total_births_per_year * prop_abx)
+amr_burden_per_abx <- 0.29
+```
+
+```{r}
+cost_culture <- 50
+total_cost_rdt <- 40
+subsidy_rdt <- 20
+(cost_rdt <- total_cost_rdt - subsidy_rdt)
+cost_treatment <- 10
+```
+
+## Scenario 1
+
+```{r}
+#' Number of DALYs averted by correctly treating
+correct_sepsis_diagnosis <- 9
+
+#' Treat every neonate with low risk
+benefit_empiric <- correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+
+#' Total cost to culture and treat all
+cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
+
+#' Cost per DALY
+(cost_empiric / benefit_empiric)
+```
+
+## Scenario 2
+
+```{r}
+#' ...
+```
