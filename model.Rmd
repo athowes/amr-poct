@@ -13,8 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 * Neonate with suspected neonatal sepsis in India
 * Considered two possible point-of-care tests (POCT)
-  1. POCT to identify neonatal sepsis, but not causative pathogen
-  2. POCT to identify neonatal sepsis and causative pathogen
+  a. POCT to identify neonatal sepsis, but not causative pathogen **modelled in Scenario 2**
+  b. POCT to identify neonatal sepsis and causative pathogen **not yet modelled**
 * Metrics are cost per disability adjusted life year (DALY) and incremental cost-effectiveness ratio (ICER)
 
 ```{r}
@@ -32,6 +32,8 @@ prop_high_risk_sepsis <- 0.4
 prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
 
 #' Total births with high risk sepsis
+#' Assume that all high risk cases recive correct treatment
+#' TODO Why? Are they easier to spot somehow?
 (births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis)
 
 #' Total births with low risk sepsis
@@ -40,10 +42,10 @@ prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
 #' Assume 20% of neonates receive antibiotics
 prop_abx <- 0.2
 
-#' Then the total number of births who recieve anitbiotics per year is
+#' Then the total number of births who receive anitbiotics per year is
 (births_abx <- births_per_year * prop_abx)
 
-#' Assume that all high risk births recieve antibiotics
+#' Assume that all high risk births receive antibiotics
 (births_abx_sepsis_high_risk <- births_sepsis_high_risk)
 
 #' Assume the remainder are given to those who are low risk
@@ -51,10 +53,13 @@ prop_abx <- 0.2
 ```
 
 ```{r}
-#' AMR burden per perscription of antibiotics
+#' AMR burden per prescription of antibiotics
 total_births_per_year <- 130 * 10^6
 (total_births_abx_per_year <- total_births_per_year * prop_abx)
-amr_burden_per_abx <- 0.29
+total_sepsis_burden <- 24.6 * 10^6
+prop_burden_abx <- 0.31
+total_amr_burden <- total_sepsis_burden * prop_burden_abx
+(amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year)
 ```
 
 ```{r}
@@ -69,20 +74,53 @@ cost_treatment <- 10
 
 ```{r}
 #' Number of DALYs averted by correctly treating
-correct_sepsis_diagnosis <- 9
+benefit_correct_sepsis_diagnosis <- 9
 
 #' Treat every neonate with low risk
-benefit_empiric <- correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
 
 #' Total cost to culture and treat all
 cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
 
 #' Cost per DALY
-(cost_empiric / benefit_empiric)
+(cost_per_daly_s1 <- cost_empiric / benefit_empiric)
 ```
 
 ## Scenario 2
 
+$$
+\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}}
+$$
+$$
+\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}
+$$
+
 ```{r}
-#' ...
+sensitivity <- 0.9
+specificity <- 0.9
+
+sepsis_prev_low_risk <- births_sepsis_low_risk / births_abx_sepsis_low_risk
+
+#' Has sepsis and treated
+(true_positive <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * sensitivity)
+  
+#' Doesn't have sepsis and treated
+(false_positive <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity))
+  
+#' Has sepsis and not treated
+(false_negative <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * (1 - sensitivity))
+  
+#' Doesn't have sepsis and not treated
+(true_negative <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * specificity)
+
+stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
+
+#' Estimate that around half of false negatives would later be identified
+harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
+
+benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive
+cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
+
+#' Cost per DALY
+(cost_per_daly_s2 <- cost_test / benefit_test)
 ```

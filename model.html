@@ -11,7 +11,7 @@
 
 <meta name="author" content="Adam Howes" />
 
-<meta name="date" content="2024-01-09" />
+<meta name="date" content="2024-01-12" />
 
 <title>Cost effectiveness analysis for an AMR point-of-care test</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Cost effectiveness analysis for an AMR
 point-of-care test</h1>
 <h4 class="author">Adam Howes</h4>
-<h4 class="date">2024-01-09</h4>
+<h4 class="date">2024-01-12</h4>
 
 </div>
 
@@ -363,9 +363,11 @@ point-of-care test</h1>
 <ul>
 <li>Neonate with suspected neonatal sepsis in India</li>
 <li>Considered two possible point-of-care tests (POCT)
-<ol style="list-style-type: decimal">
-<li>POCT to identify neonatal sepsis, but not causative pathogen</li>
-<li>POCT to identify neonatal sepsis and causative pathogen</li>
+<ol style="list-style-type: lower-alpha">
+<li>POCT to identify neonatal sepsis, but not causative pathogen
+<strong>modelled in Scenario 2</strong></li>
+<li>POCT to identify neonatal sepsis and causative pathogen <strong>not
+yet modelled</strong></li>
 </ol></li>
 <li>Metrics are cost per disability adjusted life year (DALY) and
 incremental cost-effectiveness ratio (ICER)</li>
@@ -384,6 +386,8 @@ prop_high_risk_sepsis &lt;- 0.4
 prop_low_risk_sepsis &lt;- 1 - prop_high_risk_sepsis
 
 #&#39; Total births with high risk sepsis
+#&#39; Assume that all high risk cases recive correct treatment
+#&#39; TODO Why? Are they easier to spot somehow?
 (births_sepsis_high_risk &lt;- births_sepsis * prop_high_risk_sepsis)</code></pre>
 <pre><code>## [1] 7e+05</code></pre>
 <pre class="r"><code>#&#39; Total births with low risk sepsis
@@ -392,20 +396,24 @@ prop_low_risk_sepsis &lt;- 1 - prop_high_risk_sepsis
 <pre class="r"><code>#&#39; Assume 20% of neonates receive antibiotics
 prop_abx &lt;- 0.2
 
-#&#39; Then the total number of births who recieve anitbiotics per year is
+#&#39; Then the total number of births who receive anitbiotics per year is
 (births_abx &lt;- births_per_year * prop_abx)</code></pre>
 <pre><code>## [1] 5e+06</code></pre>
-<pre class="r"><code>#&#39; Assume that all high risk births recieve antibiotics
+<pre class="r"><code>#&#39; Assume that all high risk births receive antibiotics
 (births_abx_sepsis_high_risk &lt;- births_sepsis_high_risk)</code></pre>
 <pre><code>## [1] 7e+05</code></pre>
 <pre class="r"><code>#&#39; Assume the remainder are given to those who are low risk
 (births_abx_sepsis_low_risk &lt;- births_abx - births_abx_sepsis_high_risk)</code></pre>
 <pre><code>## [1] 4300000</code></pre>
-<pre class="r"><code>#&#39; AMR burden per perscription of antibiotics
+<pre class="r"><code>#&#39; AMR burden per prescription of antibiotics
 total_births_per_year &lt;- 130 * 10^6
 (total_births_abx_per_year &lt;- total_births_per_year * prop_abx)</code></pre>
 <pre><code>## [1] 2.6e+07</code></pre>
-<pre class="r"><code>amr_burden_per_abx &lt;- 0.29</code></pre>
+<pre class="r"><code>total_sepsis_burden &lt;- 24.6 * 10^6
+prop_burden_abx &lt;- 0.31
+total_amr_burden &lt;- total_sepsis_burden * prop_burden_abx
+(amr_burden_per_abx &lt;- total_amr_burden / total_births_abx_per_year)</code></pre>
+<pre><code>## [1] 0.2933077</code></pre>
 <pre class="r"><code>cost_culture &lt;- 50
 total_cost_rdt &lt;- 40
 subsidy_rdt &lt;- 20
@@ -416,21 +424,53 @@ subsidy_rdt &lt;- 20
 <div id="scenario-1" class="section level2">
 <h2>Scenario 1</h2>
 <pre class="r"><code>#&#39; Number of DALYs averted by correctly treating
-correct_sepsis_diagnosis &lt;- 9
+benefit_correct_sepsis_diagnosis &lt;- 9
 
 #&#39; Treat every neonate with low risk
-benefit_empiric &lt;- correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+benefit_empiric &lt;- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
 
 #&#39; Total cost to culture and treat all
 cost_empiric &lt;- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
 
 #&#39; Cost per DALY
-(cost_empiric / benefit_empiric)</code></pre>
-<pre><code>## [1] 30.32618</code></pre>
+(cost_per_daly_s1 &lt;- cost_empiric / benefit_empiric)</code></pre>
+<pre><code>## [1] 30.36455</code></pre>
 </div>
 <div id="scenario-2" class="section level2">
 <h2>Scenario 2</h2>
-<pre class="r"><code>#&#39; ...</code></pre>
+<p><span class="math display">\[
+\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}}
+\]</span> <span class="math display">\[
+\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}
+\]</span></p>
+<pre class="r"><code>sensitivity &lt;- 0.9
+specificity &lt;- 0.9
+
+sepsis_prev_low_risk &lt;- births_sepsis_low_risk / births_abx_sepsis_low_risk
+
+#&#39; Has sepsis and treated
+(true_positive &lt;- births_abx_sepsis_low_risk * sepsis_prev_low_risk * sensitivity)</code></pre>
+<pre><code>## [1] 945000</code></pre>
+<pre class="r"><code>#&#39; Doesn&#39;t have sepsis and treated
+(false_positive &lt;- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity))</code></pre>
+<pre><code>## [1] 325000</code></pre>
+<pre class="r"><code>#&#39; Has sepsis and not treated
+(false_negative &lt;- births_abx_sepsis_low_risk * sepsis_prev_low_risk * (1 - sensitivity))</code></pre>
+<pre><code>## [1] 105000</code></pre>
+<pre class="r"><code>#&#39; Doesn&#39;t have sepsis and not treated
+(true_negative &lt;- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * specificity)</code></pre>
+<pre><code>## [1] 2925000</code></pre>
+<pre class="r"><code>stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
+
+#&#39; Estimate that around half of false negatives would later be identified
+harm_false_negative &lt;- benefit_correct_sepsis_diagnosis * 0.5
+
+benefit_test &lt;- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive
+cost_test &lt;- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
+
+#&#39; Cost per DALY
+(cost_per_daly_s2 &lt;- cost_test / benefit_test)</code></pre>
+<pre><code>## [1] 45.44576</code></pre>
 </div>
 
 
