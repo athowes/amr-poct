@@ -1,0 +1,217 @@
+---
+title: "Cost effectiveness analysis for an AMR point-of-care test"
+author: "Adam Howes"
+date: "2024-01-12"
+output: html_document
+---
+
+
+
+## Background
+
+* Neonate with suspected neonatal sepsis in India
+* Considered two possible point-of-care tests (POCT)
+  a. POCT to identify neonatal sepsis, but not causative pathogen **modelled in Scenario 2**
+  b. POCT to identify neonatal sepsis and causative pathogen **not yet modelled**
+* Metrics are cost per disability adjusted life year (DALY) and incremental cost-effectiveness ratio (ICER)
+
+
+```r
+#' Number of children born in India each year
+births_per_year <- 25 * 10^6
+
+#' Rate of having neonatal sepsis
+sepsis_rate <- 70 / 1000
+
+#' The number of births with neonatal sepsis is
+(births_sepsis <- births_per_year * sepsis_rate)
+```
+
+```
+## [1] 1750000
+```
+
+```r
+#' Of those, assume 40% are high risk and 60% are low risk
+prop_high_risk_sepsis <- 0.4
+prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
+
+#' Total births with high risk sepsis
+#' Assume that all high risk cases recive correct treatment
+#' TODO Why? Are they easier to spot somehow?
+(births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis)
+```
+
+```
+## [1] 7e+05
+```
+
+```r
+#' Total births with low risk sepsis
+(births_sepsis_low_risk <- births_sepsis * prop_low_risk_sepsis)
+```
+
+```
+## [1] 1050000
+```
+
+```r
+#' Assume 20% of neonates receive antibiotics
+prop_abx <- 0.2
+
+#' Then the total number of births who receive anitbiotics per year is
+(births_abx <- births_per_year * prop_abx)
+```
+
+```
+## [1] 5e+06
+```
+
+```r
+#' Assume that all high risk births receive antibiotics
+(births_abx_sepsis_high_risk <- births_sepsis_high_risk)
+```
+
+```
+## [1] 7e+05
+```
+
+```r
+#' Assume the remainder are given to those who are low risk
+(births_abx_sepsis_low_risk <- births_abx - births_abx_sepsis_high_risk)
+```
+
+```
+## [1] 4300000
+```
+
+
+```r
+#' AMR burden per prescription of antibiotics
+total_births_per_year <- 130 * 10^6
+(total_births_abx_per_year <- total_births_per_year * prop_abx)
+```
+
+```
+## [1] 2.6e+07
+```
+
+```r
+total_sepsis_burden <- 24.6 * 10^6
+prop_burden_abx <- 0.31
+total_amr_burden <- total_sepsis_burden * prop_burden_abx
+(amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year)
+```
+
+```
+## [1] 0.2933077
+```
+
+
+```r
+cost_culture <- 50
+total_cost_rdt <- 40
+subsidy_rdt <- 20
+(cost_rdt <- total_cost_rdt - subsidy_rdt)
+```
+
+```
+## [1] 20
+```
+
+```r
+cost_treatment <- 10
+```
+
+## Scenario 1
+
+
+```r
+#' Number of DALYs averted by correctly treating
+benefit_correct_sepsis_diagnosis <- 9
+
+#' Treat every neonate with low risk
+benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+
+#' Total cost to culture and treat all
+cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
+
+#' Cost per DALY
+(cost_per_daly_s1 <- cost_empiric / benefit_empiric)
+```
+
+```
+## [1] 30.36455
+```
+
+## Scenario 2
+
+The sensitivity is defined as
+
+$$
+\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}},
+$$
+and the specificity is defined as
+
+$$
+\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}.
+$$
+
+
+```r
+sensitivity <- 0.9
+specificity <- 0.9
+
+sepsis_prev_low_risk <- births_sepsis_low_risk / births_abx_sepsis_low_risk
+
+#' Has sepsis and treated
+(true_positive <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * sensitivity)
+```
+
+```
+## [1] 945000
+```
+
+```r
+#' Doesn't have sepsis and treated
+(false_positive <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity))
+```
+
+```
+## [1] 325000
+```
+
+```r
+#' Has sepsis and not treated
+(false_negative <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * (1 - sensitivity))
+```
+
+```
+## [1] 105000
+```
+
+```r
+#' Doesn't have sepsis and not treated
+(true_negative <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * specificity)
+```
+
+```
+## [1] 2925000
+```
+
+```r
+stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
+
+#' Estimate that around half of false negatives would later be identified
+harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
+
+benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive
+cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
+
+#' Cost per DALY
+(cost_per_daly_s2 <- cost_test / benefit_test)
+```
+
+```
+## [1] 45.44576
+```
