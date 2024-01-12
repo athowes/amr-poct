@@ -1,1 +1,1 @@
-knitr::knit("notebooks/model.Rmd", output = "docs/model.html")
+rmarkdown::render(input = "notebooks/model.Rmd", output_file = "docs/model.html")
