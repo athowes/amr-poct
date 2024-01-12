@@ -438,10 +438,12 @@ cost_empiric &lt;- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
 </div>
 <div id="scenario-2" class="section level2">
 <h2>Scenario 2</h2>
+<p>The sensitivity is defined as</p>
 <p><span class="math display">\[
-\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}}
-\]</span> <span class="math display">\[
-\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}
+\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}},
+\]</span> and the specificity is defined as</p>
+<p><span class="math display">\[
+\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}.
 \]</span></p>
 <pre class="r"><code>sensitivity &lt;- 0.9
 specificity &lt;- 0.9

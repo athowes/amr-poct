@@ -88,11 +88,15 @@ cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
 
 ## Scenario 2
 
+The sensitivity is defined as
+
 $$
-\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}}
+\text{sensitivity} = \frac{\text{TP}}{{\text{TP} + \text{FN}}},
 $$
+and the specificity is defined as
+
 $$
-\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}
+\text{specificity} = \frac{\text{TN}}{{\text{TN} + \text{FP}}}.
 $$
 
 ```{r}
