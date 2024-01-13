@@ -28,12 +28,14 @@ sepsis_rate <- 70 / 1000
 (births_sepsis <- births_per_year * sepsis_rate)
 
 #' Of those, assume 40% are high risk and 60% are low risk
+#' High risk means easy to spot (obvious symptoms)
+#' Low risk means harder to spot (no obvious symptoms)
+#' 40% is probably a high estimate of the proportion which are high risk
 prop_high_risk_sepsis <- 0.4
 prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
 
 #' Total births with high risk sepsis
-#' Assume that all high risk cases recive correct treatment
-#' TODO Why? Are they easier to spot somehow?
+#' Assume that all high risk cases recieve correct treatment
 (births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis)
 
 #' Total births with low risk sepsis
@@ -128,3 +130,13 @@ cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (tru
 #' Cost per DALY
 (cost_per_daly_s2 <- cost_test / benefit_test)
 ```
+
+## Cost effectiveness
+
+* Relevant outcomes
+  1. Cost effectiveness of POCT (no subsidy)
+  2. Cost effectivenss of POCT (subsidised)
+    a) ICER compared to baseline scenario
+    b) Cost effectiveness of prize for funders
+* Vary `sensitivity` and `specificty` for 1. and 2.
+* Vary `subsidy_rdt` for 2.

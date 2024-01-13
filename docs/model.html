@@ -11,7 +11,7 @@
 
 <meta name="author" content="Adam Howes" />
 
-<meta name="date" content="2024-01-12" />
+<meta name="date" content="2024-01-13" />
 
 <title>Cost effectiveness analysis for an AMR point-of-care test</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Cost effectiveness analysis for an AMR
 point-of-care test</h1>
 <h4 class="author">Adam Howes</h4>
-<h4 class="date">2024-01-12</h4>
+<h4 class="date">2024-01-13</h4>
 
 </div>
 
@@ -382,12 +382,14 @@ sepsis_rate &lt;- 70 / 1000
 (births_sepsis &lt;- births_per_year * sepsis_rate)</code></pre>
 <pre><code>## [1] 1750000</code></pre>
 <pre class="r"><code>#&#39; Of those, assume 40% are high risk and 60% are low risk
+#&#39; High risk means easy to spot (obvious symptoms)
+#&#39; Low risk means harder to spot (no obvious symptoms)
+#&#39; 40% is probably a high estimate of the proportion which are high risk
 prop_high_risk_sepsis &lt;- 0.4
 prop_low_risk_sepsis &lt;- 1 - prop_high_risk_sepsis
 
 #&#39; Total births with high risk sepsis
-#&#39; Assume that all high risk cases recive correct treatment
-#&#39; TODO Why? Are they easier to spot somehow?
+#&#39; Assume that all high risk cases recieve correct treatment
 (births_sepsis_high_risk &lt;- births_sepsis * prop_high_risk_sepsis)</code></pre>
 <pre><code>## [1] 7e+05</code></pre>
 <pre class="r"><code>#&#39; Total births with low risk sepsis
@@ -473,6 +475,23 @@ cost_test &lt;- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (
 #&#39; Cost per DALY
 (cost_per_daly_s2 &lt;- cost_test / benefit_test)</code></pre>
 <pre><code>## [1] 45.44576</code></pre>
+</div>
+<div id="cost-effectiveness" class="section level2">
+<h2>Cost effectiveness</h2>
+<ul>
+<li>Relevant outcomes
+<ol style="list-style-type: decimal">
+<li>Cost effectiveness of POCT (no subsidy)</li>
+<li>Cost effectivenss of POCT (subsidised)</li>
+</ol>
+<ol style="list-style-type: lower-alpha">
+<li>ICER compared to baseline scenario</li>
+<li>Cost effectiveness of prize for funders</li>
+</ol></li>
+<li>Vary <code>sensitivity</code> and <code>specificty</code> for 1. and
+2.</li>
+<li>Vary <code>subsidy_rdt</code> for 2.</li>
+</ul>
 </div>
 
 
