@@ -211,7 +211,7 @@ run_cea <- function(sensitivity, specificity) {
   cost_incremental <- cost_test - subsidy_test - cost_empiric
   benefit_incremental <- benefit_test - benefit_empiric
   icer <- cost_incremental / benefit_incremental
-  return(icer)
+  return(list(icer = icer, cost_incremental = cost_incremental, benefit_incremental = benefit_incremental))
 }
   
 run_cea(0.9, 0.9)
@@ -220,12 +220,27 @@ run_cea(0.9, 0.9)
 ```{r}
 grid <- seq(from = 0, to = 1, length.out = 41)
 
-df <- tidyr::crossing(sensitivity = grid, specificity = grid) |>
-  mutate(icer = map2_dbl(sensitivity, specificity, run_cea))
+df <- tidyr::crossing(sensitivity = grid, specificity = grid)
+df <- bind_cols(df, pmap_dfr(df, run_cea))
 
 ggplot(df, aes(x = sensitivity, y = specificity, fill = icer)) + 
   geom_tile() +
+  coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "ICER") +
-  scale_fill_gradient2()
+    scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
+
+ggplot(df, aes(x = sensitivity, y = specificity, fill = cost_incremental)) + 
+  geom_tile() +
+  coord_fixed(ratio = 1) +
+  theme_minimal() +
+  labs(x = "Sensitivity", y = "Specificity", fill = "Incremental benefit") +
+  scale_fill_viridis_c()
+
+ggplot(df, aes(x = sensitivity, y = specificity, fill = benefit_incremental)) + 
+  geom_tile() +
+  coord_fixed(ratio = 1) +
+  theme_minimal() +
+  labs(x = "Sensitivity", y = "Specificity", fill = "Incremental cost") +
+  scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
 ```
