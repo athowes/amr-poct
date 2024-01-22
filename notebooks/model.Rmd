@@ -7,6 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(purrr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(pals)
 ```
 
 ## Background
@@ -15,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 * Considered two possible point-of-care tests (POCT)
   a. POCT to identify neonatal sepsis, but not causative pathogen **modelled in Scenario 2**
   b. POCT to identify neonatal sepsis and causative pathogen **not yet modelled**
-* Metrics are cost per disability adjusted life year (DALY) and incremental cost-effectiveness ratio (ICER)
+* Metrics are cost per disability adjusted life year (DALY) and [incremental cost-effectiveness ratio](https://en.wikipedia.org/wiki/Incremental_cost-effectiveness_ratio) (ICER)
 
 ```{r}
 #' Number of children born in India each year
@@ -69,7 +74,7 @@ cost_culture <- 50
 total_cost_rdt <- 40
 subsidy_rdt <- 20
 (cost_rdt <- total_cost_rdt - subsidy_rdt)
-cost_treatment <- 10
+cost_treatment <- 5
 ```
 
 ## Scenario 1
@@ -79,7 +84,7 @@ cost_treatment <- 10
 benefit_correct_sepsis_diagnosis <- 9
 
 #' Treat every neonate with low risk
-benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+(benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk))
 
 #' Total cost to culture and treat all
 cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
@@ -124,8 +129,8 @@ stopifnot(true_positive + false_positive + false_negative + true_negative == bir
 #' Estimate that around half of false negatives would later be identified
 harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
 
-benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive
-cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
+(benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive)
+(cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment)
 
 #' Cost per DALY
 (cost_per_daly_s2 <- cost_test / benefit_test)
@@ -135,8 +140,92 @@ cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (tru
 
 * Relevant outcomes
   1. Cost effectiveness of POCT (no subsidy)
-  2. Cost effectivenss of POCT (subsidised)
+  2. Cost effectiveness of POCT (subsidised)
     a) ICER compared to baseline scenario
     b) Cost effectiveness of prize for funders
 * Vary `sensitivity` and `specificty` for 1. and 2.
 * Vary `subsidy_rdt` for 2.
+
+```{r}
+#' Total amount of subsidy in scenario 2
+(subsidy_test <- subsidy_rdt * births_abx_sepsis_low_risk)
+
+#' Additional cost of scenario 2 over scenario 1 for government
+(cost_incremental <- cost_test - subsidy_test - cost_empiric)
+
+#' Additional benefit of scenario 2 over scenario 1
+(benefit_incremental <- benefit_test - benefit_empiric)
+
+#' ICER
+(icer <- cost_incremental / benefit_incremental)
+```
+
+## Sensitivity analysis
+
+```{r}
+run_cea <- function(sensitivity, specificity) {
+  births_per_year <- 25 * 10^6
+  sepsis_rate <- 70 / 1000
+  births_sepsis <- births_per_year * sepsis_rate
+  prop_high_risk_sepsis <- 0.4
+  prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
+  births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis
+  prop_abx <- 0.2
+  births_abx <- births_per_year * prop_abx
+  births_abx_sepsis_high_risk <- births_sepsis_high_risk
+  births_abx_sepsis_low_risk <- births_abx - births_abx_sepsis_high_risk
+  
+  total_births_per_year <- 130 * 10^6
+  total_births_abx_per_year <- total_births_per_year * prop_abx
+  
+  total_sepsis_burden <- 24.6 * 10^6
+  prop_burden_abx <- 0.31
+  total_amr_burden <- total_sepsis_burden * prop_burden_abx
+  amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year
+  
+  cost_culture <- 50
+  total_cost_rdt <- 40
+  subsidy_rdt <- 20
+  cost_rdt <- total_cost_rdt - subsidy_rdt
+  cost_treatment <- 5
+  
+  # Scenario 1
+  benefit_correct_sepsis_diagnosis <- 9
+  benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+  cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
+  cost_per_daly_s1 <- cost_empiric / benefit_empiric
+  
+  # Scenario 2
+  sepsis_prev_low_risk <- births_sepsis_low_risk / births_abx_sepsis_low_risk
+  true_positive <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * sensitivity
+  false_positive <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity)
+  false_negative <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * (1 - sensitivity)
+  true_negative <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * specificity
+  stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
+  harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
+  benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive
+  cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
+  cost_per_daly_s2 <- cost_test / benefit_test
+  
+  subsidy_test <- subsidy_rdt * births_abx_sepsis_low_risk
+  cost_incremental <- cost_test - subsidy_test - cost_empiric
+  benefit_incremental <- benefit_test - benefit_empiric
+  icer <- cost_incremental / benefit_incremental
+  return(icer)
+}
+  
+run_cea(0.9, 0.9)
+```
+
+```{r}
+grid <- seq(from = 0, to = 1, length.out = 41)
+
+df <- tidyr::crossing(sensitivity = grid, specificity = grid) |>
+  mutate(icer = map2_dbl(sensitivity, specificity, run_cea))
+
+ggplot(df, aes(x = sensitivity, y = specificity, fill = icer)) + 
+  geom_tile() +
+  theme_minimal() +
+  labs(x = "Sensitivity", y = "Specificity", fill = "ICER") +
+  scale_fill_gradient2()
+```
