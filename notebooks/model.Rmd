@@ -71,8 +71,8 @@ total_amr_burden <- total_sepsis_burden * prop_burden_abx
 
 ```{r}
 cost_culture <- 50
-total_cost_rdt <- 40
-subsidy_rdt <- 20
+total_cost_rdt <- 20
+subsidy_rdt <- 10
 (cost_rdt <- total_cost_rdt - subsidy_rdt)
 cost_treatment <- 5
 ```
@@ -184,8 +184,8 @@ run_cea <- function(sensitivity, specificity) {
   amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year
   
   cost_culture <- 50
-  total_cost_rdt <- 40
-  subsidy_rdt <- 20
+  total_cost_rdt <- 20
+  subsidy_rdt <- 10
   cost_rdt <- total_cost_rdt - subsidy_rdt
   cost_treatment <- 5
   
