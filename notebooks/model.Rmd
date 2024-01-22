@@ -198,12 +198,17 @@ run_cea <- function(sensitivity, specificity) {
   # Scenario 2
   sepsis_prev_low_risk <- births_sepsis_low_risk / births_abx_sepsis_low_risk
   true_positive <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * sensitivity
-  false_positive <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity)
   false_negative <- births_abx_sepsis_low_risk * sepsis_prev_low_risk * (1 - sensitivity)
   true_negative <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * specificity
+  false_positive <- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity)
   stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
   harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
-  benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive
+  
+  benefit_test <- (true_positive * benefit_correct_sepsis_diagnosis) + 
+                  (true_negative * amr_burden_per_abx) - 
+                  (false_negative * harm_false_negative) - 
+                  (false_positive * amr_burden_per_abx)
+  
   cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
   cost_per_daly_s2 <- cost_test / benefit_test
   
@@ -223,24 +228,48 @@ grid <- seq(from = 0, to = 1, length.out = 41)
 df <- tidyr::crossing(sensitivity = grid, specificity = grid)
 df <- bind_cols(df, pmap_dfr(df, run_cea))
 
-ggplot(df, aes(x = sensitivity, y = specificity, fill = icer)) + 
+ggplot(df, aes(x = sensitivity, y = specificity, fill = 1 / icer)) + 
   geom_tile() +
   coord_fixed(ratio = 1) +
   theme_minimal() +
-  labs(x = "Sensitivity", y = "Specificity", fill = "ICER") +
-    scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
-
-ggplot(df, aes(x = sensitivity, y = specificity, fill = cost_incremental)) + 
-  geom_tile() +
-  coord_fixed(ratio = 1) +
-  theme_minimal() +
-  labs(x = "Sensitivity", y = "Specificity", fill = "Incremental benefit") +
-  scale_fill_viridis_c()
+  labs(x = "Sensitivity", y = "Specificity", fill = "DALYS per dollar") +
+  scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
 
 ggplot(df, aes(x = sensitivity, y = specificity, fill = benefit_incremental)) + 
   geom_tile() +
   coord_fixed(ratio = 1) +
   theme_minimal() +
-  labs(x = "Sensitivity", y = "Specificity", fill = "Incremental cost") +
+  labs(x = "Sensitivity", y = "Specificity", fill = "Incremental benefit") +
   scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
+
+ggplot(df, aes(x = sensitivity, y = specificity, fill = cost_incremental)) + 
+  geom_tile() +
+  coord_fixed(ratio = 1) +
+  theme_minimal() +
+  labs(x = "Sensitivity", y = "Specificity", fill = "Incremental cost") +
+  scale_fill_viridis_c()
+
+df %>%
+  filter(sensitivity == 0.9) %>%
+  ggplot(aes(x = specificity, y = 1 / icer)) +
+  geom_point() +
+  theme_minimal()
+
+df %>%
+  filter(sensitivity == 0.9) %>%
+  ggplot(aes(x = specificity, y = benefit_incremental)) +
+  geom_point() +
+  theme_minimal()
+
+df %>%
+  filter(specificity == 0.9) %>%
+  ggplot(aes(x = sensitivity, y = 1 / icer)) +
+  geom_point() +
+  theme_minimal()
+
+df %>%
+  filter(specificity == 0.9) %>%
+  ggplot(aes(x = sensitivity, y = benefit_incremental)) +
+  geom_point() +
+  theme_minimal()
 ```
