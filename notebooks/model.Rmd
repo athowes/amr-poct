@@ -217,6 +217,8 @@ ggplot(df, aes(x = sensitivity, y = specificity, fill = 1 / icer)) +
   coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "DALYS per dollar") +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
   scale_fill_continuous_diverging(palette = "Tropic")
 
 ggplot(df, aes(x = sensitivity, y = specificity, fill = benefit_incremental)) + 
@@ -224,6 +226,7 @@ ggplot(df, aes(x = sensitivity, y = specificity, fill = benefit_incremental)) +
   coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "Incremental benefit") +
+  scale_x_continuous(labels = scales::percent) +
   scale_fill_continuous_diverging(palette = "Tropic", labels = scales::unit_format(unit = "M", scale = 10E-6))
 
 ggplot(df, aes(x = sensitivity, y = specificity, fill = cost_incremental)) + 
@@ -231,6 +234,8 @@ ggplot(df, aes(x = sensitivity, y = specificity, fill = cost_incremental)) +
   coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "Incremental cost") +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
   scale_fill_viridis_c(labels = scales::unit_format(unit = "M", scale = 10E-6))
 
 df %>%
@@ -256,6 +261,7 @@ df %>%
   geom_line() +
   geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +  
   theme_minimal() +
+  scale_x_continuous(labels = scales::percent) +
   labs(x = "Sensitivity", y = "DALYs per dollar", caption = "Specificity fixed to 90%")
 
 df %>%
@@ -264,6 +270,33 @@ df %>%
   geom_line() +
   geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +
   theme_minimal() +
+  scale_x_continuous(labels = scales::percent) +
   scale_y_continuous(labels = scales::unit_format(unit = "M", scale = 10E-6)) +
   labs(x = "Sensitivity", y = "Incremental benefit (DALYs)", caption = "Specificity fixed to 90%")
 ```
+
+## Varying AMR burden per perscription
+
+```{r}
+grid <- seq(from = 0, to = 0.5, length.out = 51)
+df <- tidyr::crossing(sensitivity = 0.9, specificity = 0.9, amr_burden_per_abx = grid)
+df <- bind_cols(df, pmap_dfr(df, run_cea))
+```
+
+```{r}
+df %>%
+  ggplot(aes(x = amr_burden_per_abx, y = 1 / icer)) +
+  geom_line() +
+  geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +  
+  theme_minimal() +
+  labs(x = "AMR burden per perscription", y = "DALYs per dollar", caption = "Sensitivity and specificity fixed to 90%")
+
+df %>%
+  ggplot(aes(x = amr_burden_per_abx, y = benefit_incremental)) +
+  geom_line() +
+  geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::unit_format(unit = "M", scale = 10E-6)) +
+  labs(x = "AMR burden per perscription", y = "Incremental benefit (DALYs)", caption = "Sensitivity and specificity fixed to 90%")
+```
+
