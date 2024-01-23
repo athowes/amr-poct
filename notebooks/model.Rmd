@@ -300,3 +300,8 @@ df %>%
   labs(x = "AMR burden per perscription", y = "Incremental benefit (DALYs)", caption = "Sensitivity and specificity fixed to 90%")
 ```
 
+# Computing environment {-}
+
+```{r}
+sessionInfo()
+```
