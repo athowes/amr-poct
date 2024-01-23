@@ -2,3 +2,6 @@
 
 * [Model documentation and demonstration](https://athowes.github.io/amr-poct/model)
 * [Dashboard](https://athowes.github.io/amr-poct/dashboard)
+
+This analysis is a project of [AMR Funding Circle](https://www.amrfundingcircle.com/).
+Code by [Adam Howes](https://athowes.github.io/about).
