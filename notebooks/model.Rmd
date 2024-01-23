@@ -2,7 +2,14 @@
 title: "Cost effectiveness analysis for an AMR point-of-care test"
 author: "Adam Howes"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
 ---
 
 ```{r setup, include=FALSE}
@@ -11,105 +18,123 @@ library(purrr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(pals)
+library(colorspace)
 ```
 
-## Background
+Consider a neonate with suspected neonatal sepsis in India.
+We consider two scenarios:
 
-* Neonate with suspected neonatal sepsis in India
-* Considered two possible point-of-care tests (POCT)
-  a. POCT to identify neonatal sepsis, but not causative pathogen **modelled in Scenario 2**
-  b. POCT to identify neonatal sepsis and causative pathogen **not yet modelled**
-* Metrics are cost per disability adjusted life year (DALY) and [incremental cost-effectiveness ratio](https://en.wikipedia.org/wiki/Incremental_cost-effectiveness_ratio) (ICER)
+* In the first scenario (Section \@ref(s1)) all neonates with suspected neonatal sepsis are treated using antibiotics.
+* In the second scenario (Section \@ref(s2)) a point-of-care test (POCT) is used to identify neonatal sepsis.
+
+These scenarios are compared using disability adjusted life year (DALY) and incremental cost-effectiveness ratio (ICER) metrics.
+
+# Background
+
+The number of children born in India each year is:
 
 ```{r}
-#' Number of children born in India each year
 births_per_year <- 25 * 10^6
+```
 
-#' Rate of having neonatal sepsis
+Using a background rate of neonatal sepsis, the number of births with neonatal sepsis per year is:
+
+```{r}
 sepsis_rate <- 70 / 1000
-
-#' The number of births with neonatal sepsis is
 (births_sepsis <- births_per_year * sepsis_rate)
+```
 
-#' Of those, assume 40% are high risk and 60% are low risk
-#' High risk means easy to spot (obvious symptoms)
-#' Low risk means harder to spot (no obvious symptoms)
-#' 40% is probably a high estimate of the proportion which are high risk
+Of these births, some proportion are assumed to be "high risk" with symptoms that are clear, while others are assumed to be "low risk" and do not have obvious symptoms.
+
+```{r}
 prop_high_risk_sepsis <- 0.4
 prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
+```
 
-#' Total births with high risk sepsis
-#' Assume that all high risk cases recieve correct treatment
-(births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis)
+We assume all births with high risk sepsis are identified and treated with antibiotics:
 
-#' Total births with low risk sepsis
-(births_sepsis_low_risk <- births_sepsis * prop_low_risk_sepsis)
-
-#' Assume 20% of neonates receive antibiotics
-prop_abx <- 0.2
-
-#' Then the total number of births who receive anitbiotics per year is
-(births_abx <- births_per_year * prop_abx)
-
-#' Assume that all high risk births receive antibiotics
+```{r}
+births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis
 (births_abx_sepsis_high_risk <- births_sepsis_high_risk)
+```
 
-#' Assume the remainder are given to those who are low risk
+Births with low risk sepsis may or may not be treated.
+Assume some proportion of total neonates receive antibiotics, and that the remainder of those not perscribed to high risk sepsis neonates are perscribed to low risk sepsis neonates:
+
+```{r}
+births_sepsis_low_risk <- births_sepsis * prop_low_risk_sepsis
+prop_abx <- 0.2
+births_abx <- births_per_year * prop_abx
 (births_abx_sepsis_low_risk <- births_abx - births_abx_sepsis_high_risk)
 ```
 
+We quantify the additional AMR burden per perscrption of antibiotics as follows:
+
 ```{r}
-#' AMR burden per prescription of antibiotics
 total_births_per_year <- 130 * 10^6
-(total_births_abx_per_year <- total_births_per_year * prop_abx)
+total_births_abx_per_year <- total_births_per_year * prop_abx
 total_sepsis_burden <- 24.6 * 10^6
 prop_burden_abx <- 0.31
 total_amr_burden <- total_sepsis_burden * prop_burden_abx
 (amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year)
 ```
 
+Correct treatment of neonatal sepsis is associated to the following number of DALYs:
+
+```{r}
+benefit_correct_sepsis_diagnosis <- 9
+```
+
+# Treat all neonates {#s1}
+
+First, consider treating all neonates with suspected sepsis:
+
+```{r}
+(benefit_s1 <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk))
+```
+
+The total cost of this approach is:
+
 ```{r}
 cost_culture <- 50
+cost_treatment <- 5
+(cost_s1 <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk)
+```
+
+The cost per DALY is then:
+
+```{r}
+(cost_per_daly_s1 <- cost_s1 / benefit_s1)
+```
+
+# Use a point of care test {#s2}
+
+```{r}
 total_cost_rdt <- 20
 subsidy_rdt <- 10
 (cost_rdt <- total_cost_rdt - subsidy_rdt)
-cost_treatment <- 5
 ```
-
-## Scenario 1
-
-```{r}
-#' Number of DALYs averted by correctly treating
-benefit_correct_sepsis_diagnosis <- 9
-
-#' Treat every neonate with low risk
-(benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk))
-
-#' Total cost to culture and treat all
-cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
-
-#' Cost per DALY
-(cost_per_daly_s1 <- cost_empiric / benefit_empiric)
-```
-
-## Scenario 2
 
 The sensitivity is defined as
 
 $$
 \text{sensitivity} = \frac{\text{TP}}{\text{TP} + \text{FN}},
 $$
+
 and the specificity is defined as
 
 $$
 \text{specificity} = \frac{\text{TN}}{\text{TN} + \text{FP}}.
 $$
 
+For now we will take each to be fixed:
+
 ```{r}
 sensitivity <- 0.9
 specificity <- 0.9
+```
 
+```{r}
 sepsis_prev_low_risk <- births_sepsis_low_risk / births_abx_sepsis_low_risk
 
 #' Has sepsis and treated
@@ -129,14 +154,14 @@ stopifnot(true_positive + false_positive + false_negative + true_negative == bir
 #' Estimate that around half of false negatives would later be identified
 harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
 
-(benefit_test <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive)
-(cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment)
+(benefit_s2 <- true_positive * benefit_correct_sepsis_diagnosis + true_negative * amr_burden_per_abx - harm_false_negative * false_negative - amr_burden_per_abx * false_positive)
+(cost_s2 <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment)
 
 #' Cost per DALY
-(cost_per_daly_s2 <- cost_test / benefit_test)
+(cost_per_daly_s2 <- cost_s2 / benefit_s2)
 ```
 
-## Cost effectiveness
+# Cost effectiveness
 
 * Relevant outcomes
   1. Cost effectiveness of POCT (no subsidy)
@@ -151,19 +176,21 @@ harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
 (subsidy_test <- subsidy_rdt * births_abx_sepsis_low_risk)
 
 #' Additional cost of scenario 2 over scenario 1 for government
-(cost_incremental <- cost_test - subsidy_test - cost_empiric)
+(cost_incremental <- cost_s2 - subsidy_test - cost_s1)
 
 #' Additional benefit of scenario 2 over scenario 1
-(benefit_incremental <- benefit_test - benefit_empiric)
+(benefit_incremental <- benefit_s2 - benefit_s1)
 
 #' ICER
 (icer <- cost_incremental / benefit_incremental)
 ```
 
-## Sensitivity analysis
+# Sensitivity analysis
+
+To run the sensitivity analysis, we create a function to run the cost effectiveness analysis above:
 
 ```{r}
-run_cea <- function(sensitivity, specificity) {
+run_cea <- function(sensitivity, specificity, amr_burden_per_abx = NULL) {
   births_per_year <- 25 * 10^6
   sepsis_rate <- 70 / 1000
   births_sepsis <- births_per_year * sepsis_rate
@@ -178,10 +205,13 @@ run_cea <- function(sensitivity, specificity) {
   total_births_per_year <- 130 * 10^6
   total_births_abx_per_year <- total_births_per_year * prop_abx
   
-  total_sepsis_burden <- 24.6 * 10^6
-  prop_burden_abx <- 0.31
-  total_amr_burden <- total_sepsis_burden * prop_burden_abx
-  amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year
+  # If no AMR burden per perscription provided then calculate one
+  if(is.null(amr_burden_per_abx)) {
+    total_sepsis_burden <- 24.6 * 10^6
+    prop_burden_abx <- 0.31
+    total_amr_burden <- total_sepsis_burden * prop_burden_abx
+    amr_burden_per_abx <- total_amr_burden / total_births_abx_per_year
+  }
   
   cost_culture <- 50
   total_cost_rdt <- 20
@@ -191,9 +221,9 @@ run_cea <- function(sensitivity, specificity) {
   
   # Scenario 1
   benefit_correct_sepsis_diagnosis <- 9
-  benefit_empiric <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
-  cost_empiric <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
-  cost_per_daly_s1 <- cost_empiric / benefit_empiric
+  benefit_s1 <- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
+  cost_s1 <- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
+  cost_per_daly_s1 <- cost_s1 / benefit_s1
   
   # Scenario 2
   sepsis_prev_low_risk <- births_sepsis_low_risk / births_abx_sepsis_low_risk
@@ -204,72 +234,92 @@ run_cea <- function(sensitivity, specificity) {
   stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
   harm_false_negative <- benefit_correct_sepsis_diagnosis * 0.5
   
-  benefit_test <- (true_positive * benefit_correct_sepsis_diagnosis) + 
-                  (true_negative * amr_burden_per_abx) - 
-                  (false_negative * harm_false_negative) - 
-                  (false_positive * amr_burden_per_abx)
+  benefit_s2 <- (true_positive * benefit_correct_sepsis_diagnosis) + 
+                (true_negative * amr_burden_per_abx) - 
+                (false_negative * harm_false_negative) - 
+                (false_positive * amr_burden_per_abx)
   
-  cost_test <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
-  cost_per_daly_s2 <- cost_test / benefit_test
+  cost_s2 <- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
+  cost_per_daly_s2 <- cost_s2 / benefit_s2
   
   subsidy_test <- subsidy_rdt * births_abx_sepsis_low_risk
-  cost_incremental <- cost_test - subsidy_test - cost_empiric
-  benefit_incremental <- benefit_test - benefit_empiric
+  cost_incremental <- cost_s2 - subsidy_test - cost_s1
+  benefit_incremental <- benefit_s2 - benefit_s1
   icer <- cost_incremental / benefit_incremental
   return(list(icer = icer, cost_incremental = cost_incremental, benefit_incremental = benefit_incremental))
 }
-  
+```
+
+Check that it produces the same answer as above:
+
+```{r}
 run_cea(0.9, 0.9)
 ```
 
+## Varying sensitivity and specificity
+
+First, we consider varying the sensitivity and specificity of the POCT:
+
 ```{r}
 grid <- seq(from = 0, to = 1, length.out = 41)
-
 df <- tidyr::crossing(sensitivity = grid, specificity = grid)
 df <- bind_cols(df, pmap_dfr(df, run_cea))
+tail(df)
+```
 
+```{r}
 ggplot(df, aes(x = sensitivity, y = specificity, fill = 1 / icer)) + 
   geom_tile() +
   coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "DALYS per dollar") +
-  scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
+  scale_fill_continuous_diverging(palette = "Tropic")
 
 ggplot(df, aes(x = sensitivity, y = specificity, fill = benefit_incremental)) + 
   geom_tile() +
   coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "Incremental benefit") +
-  scale_fill_gradient2(low = munsell::mnsl("10R 6/10"), high = munsell::mnsl("10PB 6/10"), mid = "white")
+  scale_fill_continuous_diverging(palette = "Tropic", labels = scales::unit_format(unit = "M", scale = 10E-6))
 
 ggplot(df, aes(x = sensitivity, y = specificity, fill = cost_incremental)) + 
   geom_tile() +
   coord_fixed(ratio = 1) +
   theme_minimal() +
   labs(x = "Sensitivity", y = "Specificity", fill = "Incremental cost") +
-  scale_fill_viridis_c()
+  scale_fill_viridis_c(labels = scales::unit_format(unit = "M", scale = 10E-6))
 
 df %>%
   filter(sensitivity == 0.9) %>%
   ggplot(aes(x = specificity, y = 1 / icer)) +
-  geom_point() +
-  theme_minimal()
+  geom_line() +
+  geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +
+  theme_minimal() +
+  labs(x = "Specificity", y = "DALYs per dollar", caption = "Sensitivity fixed to 90%")
 
 df %>%
   filter(sensitivity == 0.9) %>%
   ggplot(aes(x = specificity, y = benefit_incremental)) +
-  geom_point() +
-  theme_minimal()
+  geom_line() +
+  geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::unit_format(unit = "M", scale = 10E-6)) +
+  labs(x = "Specificity", y = "Incremental benefit (DALYs)", caption = "Sensitivity fixed to 90%")
 
 df %>%
   filter(specificity == 0.9) %>%
   ggplot(aes(x = sensitivity, y = 1 / icer)) +
-  geom_point() +
-  theme_minimal()
+  geom_line() +
+  geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +  
+  theme_minimal() +
+  labs(x = "Sensitivity", y = "DALYs per dollar", caption = "Specificity fixed to 90%")
 
 df %>%
   filter(specificity == 0.9) %>%
   ggplot(aes(x = sensitivity, y = benefit_incremental)) +
-  geom_point() +
-  theme_minimal()
+  geom_line() +
+  geom_hline(yintercept = 0, col = "lightgrey", linetype = "dashed") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::unit_format(unit = "M", scale = 10E-6)) +
+  labs(x = "Sensitivity", y = "Incremental benefit (DALYs)", caption = "Specificity fixed to 90%")
 ```
