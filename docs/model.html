@@ -1520,7 +1520,7 @@ prop_low_risk_sepsis &lt;- 1 - prop_high_risk_sepsis</code></pre>
 (births_abx_sepsis_high_risk &lt;- births_sepsis_high_risk)</code></pre>
 <pre><code>## [1] 7e+05</code></pre>
 <p>Births with low risk sepsis may or may not be treated.
-Assume some proportion of total neonates receive antibiotics, and that the remainder of those not perscribed to high risk sepsis neonates are perscribed to low risk sepsis neonates:</p>
+Assume some proportion of total neonates receive antibiotics, and that the remainder of those not prescribed to high risk sepsis neonates are perscribed to low risk sepsis neonates:</p>
 <pre class="r"><code>births_sepsis_low_risk &lt;- births_sepsis * prop_low_risk_sepsis
 prop_abx &lt;- 0.2
 births_abx &lt;- births_per_year * prop_abx
@@ -1625,66 +1625,10 @@ harm_false_negative &lt;- benefit_correct_sepsis_diagnosis * 0.5
 </div>
 <div id="sensitivity-analysis" class="section level1" number="5">
 <h1><span class="header-section-number">5</span> Sensitivity analysis</h1>
-<p>To run the sensitivity analysis, we create a function to run the cost effectiveness analysis above:</p>
-<pre class="r"><code>run_cea &lt;- function(sensitivity, specificity, amr_burden_per_abx = NULL) {
-  births_per_year &lt;- 25 * 10^6
-  sepsis_rate &lt;- 70 / 1000
-  births_sepsis &lt;- births_per_year * sepsis_rate
-  prop_high_risk_sepsis &lt;- 0.4
-  prop_low_risk_sepsis &lt;- 1 - prop_high_risk_sepsis
-  births_sepsis_high_risk &lt;- births_sepsis * prop_high_risk_sepsis
-  prop_abx &lt;- 0.2
-  births_abx &lt;- births_per_year * prop_abx
-  births_abx_sepsis_high_risk &lt;- births_sepsis_high_risk
-  births_abx_sepsis_low_risk &lt;- births_abx - births_abx_sepsis_high_risk
-  
-  total_births_per_year &lt;- 130 * 10^6
-  total_births_abx_per_year &lt;- total_births_per_year * prop_abx
-  
-  # If no AMR burden per perscription provided then calculate one
-  if(is.null(amr_burden_per_abx)) {
-    total_sepsis_burden &lt;- 24.6 * 10^6
-    prop_burden_abx &lt;- 0.31
-    total_amr_burden &lt;- total_sepsis_burden * prop_burden_abx
-    amr_burden_per_abx &lt;- total_amr_burden / total_births_abx_per_year
-  }
-  
-  cost_culture &lt;- 50
-  total_cost_rdt &lt;- 20
-  subsidy_rdt &lt;- 10
-  cost_rdt &lt;- total_cost_rdt - subsidy_rdt
-  cost_treatment &lt;- 5
-  
-  # Scenario 1
-  benefit_correct_sepsis_diagnosis &lt;- 9
-  benefit_s1 &lt;- benefit_correct_sepsis_diagnosis * births_sepsis_low_risk - amr_burden_per_abx * (births_abx_sepsis_low_risk - births_sepsis_low_risk)
-  cost_s1 &lt;- (cost_culture + cost_treatment) * births_abx_sepsis_low_risk
-  cost_per_daly_s1 &lt;- cost_s1 / benefit_s1
-  
-  # Scenario 2
-  sepsis_prev_low_risk &lt;- births_sepsis_low_risk / births_abx_sepsis_low_risk
-  true_positive &lt;- births_abx_sepsis_low_risk * sepsis_prev_low_risk * sensitivity
-  false_negative &lt;- births_abx_sepsis_low_risk * sepsis_prev_low_risk * (1 - sensitivity)
-  true_negative &lt;- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * specificity
-  false_positive &lt;- births_abx_sepsis_low_risk * (1 - sepsis_prev_low_risk) * (1 - specificity)
-  stopifnot(true_positive + false_positive + false_negative + true_negative == births_abx_sepsis_low_risk)
-  harm_false_negative &lt;- benefit_correct_sepsis_diagnosis * 0.5
-  
-  benefit_s2 &lt;- (true_positive * benefit_correct_sepsis_diagnosis) + 
-                (true_negative * amr_burden_per_abx) - 
-                (false_negative * harm_false_negative) - 
-                (false_positive * amr_burden_per_abx)
-  
-  cost_s2 &lt;- (cost_culture + total_cost_rdt) * births_abx_sepsis_low_risk + (true_positive + false_positive) * cost_treatment
-  cost_per_daly_s2 &lt;- cost_s2 / benefit_s2
-  
-  subsidy_test &lt;- subsidy_rdt * births_abx_sepsis_low_risk
-  cost_incremental &lt;- cost_s2 - subsidy_test - cost_s1
-  benefit_incremental &lt;- benefit_s2 - benefit_s1
-  icer &lt;- cost_incremental / benefit_incremental
-  return(list(icer = icer, cost_incremental = cost_incremental, benefit_incremental = benefit_incremental))
-}</code></pre>
-<p>Check that it produces the same answer as above:</p>
+<p>To run the sensitivity analysis, we create a function <code>run_cea</code> implementing the cost effectiveness analysis above.
+This function is stored in the file <code>functions.R</code>:</p>
+<pre class="r"><code>source(&quot;../functions.R&quot;)</code></pre>
+<p>Check that <code>run_cea</code> produces the same outputs as above:</p>
 <pre class="r"><code>run_cea(0.9, 0.9)</code></pre>
 <pre><code>## $icer
 ## [1] 93.34674

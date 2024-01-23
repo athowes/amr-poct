@@ -1,30 +1,36 @@
 library(shiny)
 
+source("functions.R")
+
 ui <- fluidPage(
-  titlePanel("Hello Shiny!"),
+  titlePanel("Cost effectiveness analysis for an AMR point-of-care test"),
   sidebarLayout(
     sidebarPanel(
-      sliderInput(inputId = "bins",
-                  label = "Number of bins:",
-                  min = 1,
-                  max = 50,
-                  value = 30)
+      numericInput(inputId = "sensitivity",
+                   label = "Sensitivity:",
+                   value = 0.9),
+      numericInput(inputId = "specificity",
+                   label = "Specificity:",
+                   value = 0.95),
+      numericInput(inputId = "amr_burden_per_abx",
+                   label = "AMR burden per antibiotic:",
+                   value = 0.3)
     ),
     mainPanel(
-      plotOutput(outputId = "distPlot")
-      
+      htmlOutput(outputId = "ceaOutput")
     )
   )
 )
 
-
 server <- function(input, output) {
-  output$distPlot <- renderPlot({
-    x    <- faithful$waiting
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-    hist(x, breaks = bins, col = "#75AADB", border = "white",
-         xlab = "Waiting time to next eruption (in mins)",
-         main = "Histogram of waiting times")
+  output$ceaOutput <- renderText({
+    out <- run_cea(input$sensitivity, input$specificity, input$amr_burden_per_abx)
+    text <- paste0(
+      "ICER: ", out$icer, "<br>",
+      "Incremental cost ($): ", out$cost_incremental, "<br>",
+      "Incremental benefit (DALYs): ", out$benefit_incremental
+    )
+    return(text)
   })
 }
 
