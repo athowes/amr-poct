@@ -191,7 +191,7 @@ To run the sensitivity analysis, we create a function `run_cea` implementing the
 This function is stored in the file `functions.R`:
 
 ```{r}
-source("../functions.R")
+source("../dashboard/functions.R")
 ```
 
 Check that `run_cea` produces the same outputs as above:
