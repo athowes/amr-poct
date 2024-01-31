@@ -5,6 +5,7 @@ run_cea <- function(sensitivity, specificity, amr_burden_per_abx = NULL) {
   prop_high_risk_sepsis <- 0.4
   prop_low_risk_sepsis <- 1 - prop_high_risk_sepsis
   births_sepsis_high_risk <- births_sepsis * prop_high_risk_sepsis
+  births_sepsis_low_risk <- births_sepsis * prop_low_risk_sepsis
   prop_abx <- 0.2
   births_abx <- births_per_year * prop_abx
   births_abx_sepsis_high_risk <- births_sepsis_high_risk
