@@ -1,7 +1,5 @@
-Title: Hello Shiny!
-Author: RStudio, Inc.
-AuthorUrl: http://www.rstudio.com/
+Title: amr-poct
+Author: Adam Howes
+AuthorUrl: http://www.athowes.github.io
 License: MIT
-DisplayMode: Showcase
-Tags: getting-started
 Type: Shiny
