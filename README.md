@@ -2,6 +2,9 @@
 
 ## Background
 
+This repository contains a model developed by [AMR Funding Circle](https://www.amrfundingcircle.com/) to assess the possible value of developing a point of care test for antimicrobial resistance (AMR).
+The focus of this analysis is on neonatal sepsis in India.
+
 ## Repository structure
 
 * `dashboard/`: a simple [dashboard](https://athowes.github.io/amr-poct/dashboard/) built using `shiny`.
